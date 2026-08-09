@@ -28,16 +28,18 @@ class Target:
         __prereqs (set[Target]): set containing target objects that self depends on.
         __buildable (bool): boolean value that indicates whether self can be built. Initally set to true. 
     
-    Class Attributes:
-        buildReady (set[Target]): set containing targets objects that are buildable. 
+    Class Attributes: (not sure if I need this variable yet)
+        buildReady (set[Target]): set containing targets objects that are buildable.
+        targets (str:*Target): set of all targets in the buildsystem
     
     Public Methods:
-        get_dependents(): returns __dependents_t
-        get_prerequisites(): returns __prerequisites_t
+        get_dependents(): returns __dependents
+        get_prereqs(): returns __prereqs
         get_buildable(): returns __buildable
         dependsOn(*args): adds self's dependencies to __prereqs and adds self to every arguments __dependents_t
     """
 
+    targets = {}
     buildReady = set()
 
     def __init__(self, name):
@@ -47,6 +49,8 @@ class Target:
         self.__prereqs: set["Target"] = set()
         self.__buildable: bool = True
         Target.buildReady.add(self)
+        Target.targets[self.name] = self
+        
         # Add two set class attributes (Static) First set stores the targets that are ready to be built.  
 
 
@@ -63,29 +67,50 @@ class Target:
         return self.__buildable
     
     def set_buildable(self, value):
+        """Sets __buildable to value (true:false) if value is a boolean."""
         if (isinstance(value, bool)):
             self.__buildable = value
 
-    def dependsOn(self, *args):
+    def dependsOn(self, dependencies: set):
         """
-        Adds this targets dependencies to __prereqs set and 
-        adds this target to every arguments __dependents set.
+        Adds this target's dependencies to __prereqs set and 
+        adds this target to every dependencies's __dependents set.
 
         Parameters:
-            *args (tuple): tuple of target instance of unknown size. 
+            dependencies (set): set with no duplicate elements 
         """
-        self.__prereqs.update(args)
-        for x in args:
-            x.__dependents.add(self)
+        for x in dependencies:
+            if (x not in Target.targets):
+                Target.targets[x] = Target(x)
+            self.__prereqs.add(Target.targets[x])
 
-            if (x.__buildable == False):
-                self.__buildable = False
+            Target.targets[x].__dependents.add(self)
+                
+
+        # self.__prereqs.update(dependencies)
+        # for x in dependencies:
+        #     target_x = create_target(x, {})
+        #     target_x.__dependents.add(self)
+
+        #     if (target_x.__buildable == False):
+        #         self.__buildable = False
         
-        if (self.__buildable == False):
-            Target.buildReady.remove(self)
+        # if (self.__buildable == False):
+        #     Target.buildReady.remove(self)
         
 
+def create_target(file_name: str, dependencies: [str]) -> Target:
+    ## Check if there exists a key in the dictionary that matches the str inputed. 
+    if file_name in Target.targets:
+        print(f"File target \"{file_name}\" already exists.")
+        Target.targets[file_name].dependsOn(dependencies)    
+    else:
+        Target.targets[file_name] = Target(file_name)
+    Target.targets[file_name].dependsOn(dependencies)
+    return Target.targets[file_name]   
 
+def build(file_name: str):
+    
 
 def main():
     """
@@ -95,14 +120,25 @@ def main():
     # Create targets 
     # Populate their dependents and prereqs sets.
     # Output the targets into a json file. (Directed Acyclic Graph is the three buildsystem)
-    t1 = Target("t1")
-    t2 = Target("t2")
-    t3 = Target("t3")
+    # t1 = Target("t1")
+    # t2 = Target("t2")
+    # t3 = Target("t3")
+    # t4 = Target("t4")
 
-    t1.dependsOn(t2, t3)
+    # t1.dependsOn(t2, t3)
+    # t2.dependsOn(t4)
+
+    # for x in t1.get_prereqs():
+    #     print(x.name)
+    # for x in t2.get_prereqs():
+    #     print(x.name)
+    t1 = create_target("main.o", {"main.c", "defs.h"})
+    t2 = create_target("main.c", {"app.h", "main.c"})
+
     for x in t1.get_prereqs():
         print(x.name)
-    
+    for x in t2.get_prereqs():
+        print(x.name)
 
 if (__name__ == "__main__"):
     main()
