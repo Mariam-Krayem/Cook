@@ -109,8 +109,33 @@ def create_target(file_name: str, dependencies: [str]) -> Target:
     Target.targets[file_name].dependsOn(dependencies)
     return Target.targets[file_name]   
 
-def build(file_name: str):
+def build(file_name: str, visiting=None, built=None):
+    if visiting is None:
+        visiting = set()
+    if built is None:
+        built = set()
     
+    target: Target = Target.targets[file_name]
+    
+    if target.name in visiting:
+        raise RecursionError("There is a forbidden cycle in your buildsystem.")
+
+    visiting.add(target.name)
+
+    if target.get_prereqs():
+        for x in target.get_prereqs():
+            if x.name in built:
+                continue
+            else:
+                build(x.name, visiting, built)
+            
+            " if x is newer than target, compiel target?"
+
+    print(f"building {target.name}")
+    """
+    check if target exists and compile if it doesn't ahve any prerequisites (leaf nodes)
+    """ 
+    built.add(target.name)
 
 def main():
     """
@@ -133,12 +158,19 @@ def main():
     # for x in t2.get_prereqs():
     #     print(x.name)
     t1 = create_target("main.o", {"main.c", "defs.h"})
-    t2 = create_target("main.c", {"app.h", "main.c"})
+    t2 = create_target("main.c", {"app.h"})
+    t3 = create_target("app.h", {"main.o"})
 
-    for x in t1.get_prereqs():
-        print(x.name)
-    for x in t2.get_prereqs():
-        print(x.name)
+    # for x in t1.get_prereqs():
+    #     print(x.name)
+    # for x in t2.get_prereqs():
+    #     print(x.name)
+
+    try:
+        build("main.o")
+    except RecursionError as e:
+        print(e)
+
 
 if (__name__ == "__main__"):
     main()
