@@ -28,3 +28,7 @@ make(t1):
             for all of t1's dependencies: make()
         no: 
             build t1
+
+
+Next step would be to enable different tasks. 
+Create framework for tasks and let user define their own. (i.e. upload, download, clean, etc)
