@@ -2,32 +2,46 @@
 Conventions: docstrings and typing
 """
 
-import os;
-import time;
+import os
+import time
+from pathlib import Path
 
-def find_filepath(name: str) -> str:
+def find_filepath(name: str, root=None) -> Path | None:
     """
-    Finds the file in the project and returns the path. 
-    If corresponding file does not exist, returns null.
+    Traverses the files in the project directory and subdirectories. 
+    Returns the filepath of the file whose name matches the argument. 
+    If corresponding file does not exist, or if the extension is .py then 
+    return null. 
 
     Parameters:
-        name (str): name of file
+        name (str): name of file (case sensitive)
+        root (str): project directory
     """
-    ## make sure name is a string and not empty. 
-    ## 
+    if root is None:
+        root = Path.cwd()
+    else:
+        root = Path(root)
 
-def get_file_timestamp(filepath: str) -> float: 
+    for file in root.rglob("*"):
+        if file.is_file() and file.name == name:
+            if file.suffix == ".py":
+                continue
+            return file
+
+    return None
+   
+
+def get_file_timestamp(file: Path) -> float: 
     """
     Retrieves last-modified timestamp of a file
 
     Parameters:
-        filepath (str): a file's path name.
+        file (PAth): the file's Path object
 
     Returns:
-        float: timestamp formatted in seconds since the Unix Epoch
+        float: timestamp (last modified) formatted in seconds since the Unix Epoch
     """
-    mdata: float = os.stat(filepath).st_mtime
-    return mdata # Use strftime() method to convert to date and time instead of seconds since the Unix epoch
+    return file.stat().st_mtime # Use strftime() method to convert to date and time instead of seconds since the Unix epoch
 
 class Target:
     """
@@ -37,6 +51,7 @@ class Target:
         name (str): name of the target instance
         __dependents (set[Target]): set containing target objects that depend on self.
         __prereqs (set[Target]): set containing target objects that self depends on.
+        __recipe (str): a str that will be injected into cmd line to complete target/task
     
     Class Attributes: 
         targets (str:*Target): set of all targets in the buildsystem
@@ -48,11 +63,12 @@ class Target:
     """
     targets: dict[str, "Target"] = {}
 
-    def __init__(self, name):
+    def __init__(self, name, recipe):
         """Initializes instance of target class."""
         self.name: str = name # Temporary
         self.__dependents: set["Target"] = set()
         self.__prereqs: set["Target"] = set()
+        self.__recipe: str = recipe
         Target.targets[self.name] = self
         
 
@@ -63,6 +79,8 @@ class Target:
     def get_prereqs(self) -> set["Target"]:
         """returns set of the target's that depend on this one."""
         return self.__prereqs
+
+    def get_
 
     def dependsOn(self, dependencies: set[str]):
         """
@@ -107,9 +125,13 @@ def build(file_name: str, visiting=None, built=None):
     if built is None:
         built = set()
     
-    build_ready: bool = True ## temp
+    up_to_date: bool = True ## temp
     
-    target: Target = Target.targets[file_name]
+    target: Target = Target.targets.get(file_name)
+
+    if target is None:
+        print("Error: Target has not been added to dependency system.")
+        return ## since recursive in pre-reqs, we can assume that build will only run once in this case and a return statement will suffice. 
     
     if target.name in visiting:
         raise RecursionError("There is a forbidden cycle in your buildsystem.") ## Not entirely sure how to deal with cycles yet and if this is the most efficient way or not.
@@ -118,13 +140,24 @@ def build(file_name: str, visiting=None, built=None):
 
     visiting.add(target.name)
     
+    target_Path = find_filepath(target.name)
+    if target_Path is None:
+        up_to_date = False
+
     for x in target.get_prereqs():
         build(x.name, visiting, built)
         
-        "If any of x have timestamp that is newer than current, current is flagged as not build_ready"
+        x_Path = find_filepath(x.name)
 
+        if up_to_date and x_Path:
+            if get_file_timestamp(target_Path) < get_file_timestamp(x_Path):
+                up_to_date = False 
+        
+        "If any of x have timestamp that is newer than current, current is flagged as not up_to_date"
 
-    print(f"building {target.name}") ## if current is not build_ready, then build"
+    if not up_to_date:
+        print(f"execute recipe for {target.name}") ## if current is not build_ready, then build"
+
     visiting.remove(target.name)
     built.add(target.name)
     
@@ -136,35 +169,11 @@ def main():
     """
     Create demo presentation of a buildsystem with multiple targets.
     """
-
-    # Create targets 
-    # Populate their dependents and prereqs sets.
-    # Output the targets into a json file. (Directed Acyclic Graph is the three buildsystem)
-    # t1 = Target("t1")
-    # t2 = Target("t2")
-    # t3 = Target("t3")
-    # t4 = Target("t4")
-
-    # t1.dependsOn(t2, t3)
-    # t2.dependsOn(t4)
-
-    # for x in t1.get_prereqs():
-    #     print(x.name)
-    # for x in t2.get_prereqs():
-    #     print(x.name)
     t1 = create_target("main.o", {"main.c", "defs.h"})
     t2 = create_target("main.c", {"app.h"})
-    # t3 = create_target("app.h", {"main.o"})
-
-    # for x in t1.get_prereqs():
-    #     print(x.name)
-    # for x in t2.get_prereqs():
-    #     print(x.name)
-
     
     build("main.o")
     
-
 
 if (__name__ == "__main__"):
     main()

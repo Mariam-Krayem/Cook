@@ -1,12 +1,9 @@
 # makefile_alt
 Python program that manages projects like makefile.
 
+Goal of this project is to create a file management system similar to makefile that can be integrated into large projects as a module and managed through a python script rather than a textfile. The main workings of this program are like make. 
 
-I am trying to better understand what it is exactly that I am developing. 
-
-Makefile is a text file that lists the different targets in a project and their dependencies as well as how to create these targets (targets + recipes)
-
-Make is a command that builds a specific target, or the first target if none is specified after "make"
+Makefile is a text file that lists the different targets in a project and their dependencies as well as how to create these targets (targets + recipes) Make is a command that builds a specific target, or the first target if none is specified after "make"
 
 There are 3 main steps to building a target:
 1. Parse the makefile
